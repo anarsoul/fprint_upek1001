@@ -78,6 +78,22 @@ static void sighandler(int num)
 	aborted = 1;
 }
 
+static int get_min_br(unsigned char *buf, unsigned int len)
+{
+	int i;
+	int min_br = 0xff, sum;
+	while (len) {
+		buf += 2;
+		len -= 2;
+		for (i = 0, sum = 0; i < 62; i++, len--, buf++) {
+			if (*buf < min_br)
+				min_br = *buf;
+		}
+	}
+
+	return min_br;
+}
+
 static void write_file(FILE *out, unsigned char *buf, unsigned int len)
 {
 	int seq;
@@ -131,6 +147,7 @@ static int upek1001_test(libusb_device_handle *h)
 	int actual_len;
 	FILE *out;
 	unsigned char buf[8192];
+	int min_br;
 
 	/* INIT 1 */
 	for (i = 0; i < ARRAY_SIZE(init_1); i++) {
@@ -250,13 +267,24 @@ static int upek1001_test(libusb_device_handle *h)
 
 	/* CAPTURE image! */
 	msg("Capturing image...\n");
+	/* Skip first one */
+	r = upek1001_read_bytes(h, buf, 4096, &actual_len);
 
 	out = fopen("finger.bin", "wb");
 	do {
 		r = upek1001_read_bytes(h, buf, 4096, &actual_len);
+		min_br = get_min_br(buf, 4096);
+		//write_file(out, buf, 4096);
+		//msg("r = %d, actual: %d\n", r, actual_len);
+	} while (actual_len == 4096 && !aborted && min_br > 170);
+
+	do {
+		r = upek1001_read_bytes(h, buf, 4096, &actual_len);
+		min_br = get_min_br(buf, 4096);
 		write_file(out, buf, 4096);
 		//msg("r = %d, actual: %d\n", r, actual_len);
-	} while (actual_len == 4096 && !aborted);
+	} while (actual_len == 4096 && !aborted && min_br < 180);
+
 
 	fclose(out);
 	msg("Deinit!...\n");

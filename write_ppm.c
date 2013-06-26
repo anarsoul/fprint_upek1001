@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
 	}
 
 	in = fopen(argv[1], "rb");
-	fseek(in, 2, SEEK_SET);
+	//fseek(in, 2, SEEK_SET);
 	out = fopen("finger.ppm", "wb");
 	fprintf(out, "P2\n");
 	fprintf(out, "%d 2048\n", WIDTH);
